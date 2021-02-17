@@ -17,7 +17,6 @@ set(CMAKE_MACOSX_RPATH 1)
 # ----------------------------------------------------------------------------
 #   Build type
 # ----------------------------------------------------------------------------
-
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -25,7 +24,6 @@ endif()
 # ----------------------------------------------------------------------------
 #   Options
 # ----------------------------------------------------------------------------
-
 option(BUILD_SHARED_LIBS "Set to ON to build shared libraries" ON)
 option(BUILD_UTILS "Set to ON to build utils" ON)
 option(BUILD_TESTS "Set to ON to build tests" ON)
@@ -39,7 +37,6 @@ option(FBOW_DEVINSTALL "Set to OFF to disable source installation" ON)
 # ----------------------------------------------------------------------------
 #   Library names and directries
 # ----------------------------------------------------------------------------
-
 if(WIN32)
     # Postfix of DLLs:
     set(PROJECT_DLLVERSION "${PROJECT_VERSION_MAJOR}${PROJECT_VERSION_MINOR}${PROJECT_VERSION_PATCH}")
@@ -55,7 +52,6 @@ endif()
 # ----------------------------------------------------------------------------
 #   Find dependencies
 # ----------------------------------------------------------------------------
-
 find_package(OpenCV REQUIRED)
 if(USE_CONTRIB) # TODO: rename to USE_OPENCV_NONFREE
     add_definitions(-DUSE_CONTRIB)
@@ -84,7 +80,6 @@ add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/c
 #   Create configuration file from .in file
 #   (If you use windows take care with paths)
 # ----------------------------------------------------------------------------
-
 configure_file("${PROJECT_SOURCE_DIR}/config.cmake.in" "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake")
 install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake" DESTINATION "share/${PROJECT_NAME}/")
 
@@ -241,9 +236,9 @@ set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${EXTRA_EX
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${EXTRA_EXE_LINKER_FLAGS_DEBUG}")
 
 
-#------------------------------------------------
+#------------------------------------------------------------------------------
 # DIRS
-#------------------------------------------------
+#------------------------------------------------------------------------------
 add_subdirectory(src)
 
 if(BUILD_UTILS)
