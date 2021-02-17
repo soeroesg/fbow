@@ -1,9 +1,10 @@
 # ----------------------------------------------------------------------------
-#   Basic Configuration
+#   Basic configuration
 # ----------------------------------------------------------------------------
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
 
-PROJECT(fbow)
+project(fbow CXX C)
+
 set(PROJECT_VERSION "0.0.1")
 string(REGEX MATCHALL "[0-9]" PROJECT_VERSION_PARTS "${PROJECT_VERSION}")
 list(GET PROJECT_VERSION_PARTS 0 PROJECT_VERSION_MAJOR)
@@ -13,195 +14,187 @@ set(PROJECT_SOVERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
 
 set(CMAKE_MACOSX_RPATH 1)
 
-#------------------------------------------------------
-# Build type
-#------------------------------------------------------
-
-IF(NOT CMAKE_BUILD_TYPE )
-   SET( CMAKE_BUILD_TYPE "Release" )
-ENDIF()
-
-#------------------------------------------------------
-# Lib Names and Dirs
-#------------------------------------------------------
-
-if(WIN32)
-    # Postfix of DLLs:
-    SET(PROJECT_DLLVERSION "${PROJECT_VERSION_MAJOR}${PROJECT_VERSION_MINOR}${PROJECT_VERSION_PATCH}")
-    SET(RUNTIME_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin CACHE PATH "Directory for dlls and binaries")
-    SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin CACHE PATH "Directory for binaries")
-    SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin CACHE PATH "Directory for dlls")
-else()
-    # Postfix of so's:
-    set(PROJECT_DLLVERSION)
-    SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_INSTALL_PREFIX}/lib/cmake/ /usr/lib/cmake /home/mjmarin/libs/ORB_SLAM2/lib/)
-
+# ----------------------------------------------------------------------------
+#   Build type
+# ----------------------------------------------------------------------------
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+# ----------------------------------------------------------------------------
+#   Options
+# ----------------------------------------------------------------------------
+option(BUILD_SHARED_LIBS "Set to ON to build shared libraries" ON)
+option(BUILD_UTILS "Set to ON to build utils" ON)
+option(BUILD_TESTS "Set to ON to build tests" ON)
+option(USE_CONTRIB "Set ON to use OpenCV contrib modules" OFF) # TODO: rename to USE_OPENCV_NONFREE
 
-
-#
-OPTION(USE_OWN_EIGEN3	"Set to OFF to use a standard eigen3 version" ON)
-OPTION(BUILD_UTILS	"Set to OFF to not build utils" ON)
-OPTION(BUILD_SHARED_LIBS 	"Set to OFF to build static libraries" ON)
-OPTION(USE_CONTRIB "Set on/off" OFF)
-
-OPTION(USE_AVX "Set on/off" ON)
-OPTION(USE_SSE3 "Set on/off" ON)
-option(FBOW_DEVINSTALL 	"Set to OFF to disable source installation" ON)
+option(USE_AVX "Set AVX instructions on/off" ON)
+option(USE_SSE3 "Set SSE3 instructions on/off" ON)
+option(USE_SSE4 "Set SSE4 instructions on/off" ON)
+option(FBOW_DEVINSTALL "Set to OFF to disable source installation" ON)
 
 # ----------------------------------------------------------------------------
-#   Find Dependencies
+#   Library names and directries
 # ----------------------------------------------------------------------------
-find_package(OpenCV  REQUIRED)
-INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
-MESSAGE("OPENCVINCDIR=${OpenCV_INCLUDE_DIRS}")
+if(WIN32)
+    # Postfix of DLLs:
+    set(PROJECT_DLLVERSION "${PROJECT_VERSION_MAJOR}${PROJECT_VERSION_MINOR}${PROJECT_VERSION_PATCH}")
+    set(RUNTIME_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin" CACHE PATH "Directory for DLLs and binaries")
+    set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin" CACHE PATH "Directory for binaries")
+    set(LIBRARY_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin" CACHE PATH "Directory for DLLs")
+else()
+    # Postfix of shared objects:
+    set(PROJECT_DLLVERSION)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_INSTALL_PREFIX}/lib/cmake/" "/usr/lib/cmake" "/usr/local/lib/cmake")
+endif()
 
-IF(USE_CONTRIB)
-add_definitions(-DUSE_CONTRIB)
-ENDIF()
-if(NOT OpenCV_VERSION VERSION_LESS "3.0")
+# ----------------------------------------------------------------------------
+#   Find dependencies
+# ----------------------------------------------------------------------------
+find_package(OpenCV REQUIRED)
+if(USE_CONTRIB) # TODO: rename to USE_OPENCV_NONFREE
+    add_definitions(-DUSE_CONTRIB)
+endif()
+if(NOT OpenCV_VERSION VERSION_LESS "3.0") # TODO: remove?
     ADD_DEFINITIONS(-DOPENCV_VERSION_3)
     SET(OPENCV_VERSION_3 ON)
-ELSE()
+else()
     SET(OPENCV_VERSION_3 OFF)
-ENDIF()
+endif()
 
-SET(REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenCV_LIBS})
+set(REQUIRED_LIBRARIES ${REQUIRED_LIBRARIES} ${OpenCV_LIBS})
 
 # ----------------------------------------------------------------------------
 #   PROJECT CONFIGURATION
 #   force some variables that could be defined in the command line to be written to cache
 # ----------------------------------------------------------------------------
-OPTION(INSTALL_DOC 	"Set to ON to build/install Documentation" OFF)
-IF (INSTALL_DOC)
-    FIND_PACKAGE(Doxygen REQUIRED)
-    MESSAGE( STATUS "INSTALL_DOC:         ${INSTALL_DOC} ")
-    INCLUDE("${PROJECT_SOURCE_DIR}/generateDoc.cmake")
-    GENERATE_DOCUMENTATION(${PROJECT_SOURCE_DIR}/dox.in)
-ENDIF()
- 
+
 # ----------------------------------------------------------------------------
 #   Uninstall target, for "make uninstall"
 # ----------------------------------------------------------------------------
-CONFIGURE_FILE( "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
-ADD_CUSTOM_TARGET(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
+add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
 # ----------------------------------------------------------------------------
-# create configuration file from .in file (If you use windows take care with paths)
+#   Create configuration file from .in file
+#   (If you use windows take care with paths)
 # ----------------------------------------------------------------------------
-
-CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/config.cmake.in" "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake")
-INSTALL(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake" DESTINATION share/${PROJECT_NAME}/ )
-
-
+configure_file("${PROJECT_SOURCE_DIR}/config.cmake.in" "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake")
+install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake" DESTINATION "share/${PROJECT_NAME}/")
 
 
 # ----------------------------------------------------------------------------
-#   Program Optimization and debug (Extracted from OpenCV)
+#   Program optimization and debug options
 # ----------------------------------------------------------------------------
-set(WARNINGS_ARE_ERRORS 		OFF CACHE BOOL "Treat warnings as errors")
-set(WHOLE_PROGRAM_OPTIMIZATION 	OFF CACHE BOOL "Flags for whole program optimization.")
+set(WARNINGS_ARE_ERRORS OFF CACHE BOOL "Treat warnings as errors")
+set(WHOLE_PROGRAM_OPTIMIZATION OFF CACHE BOOL "Flags for whole program optimization.")
 
 set(EXTRA_C_FLAGS "")
 set(EXTRA_C_FLAGS_RELEASE "")
 set(EXTRA_C_FLAGS_DEBUG "")
+
 set(EXTRA_EXE_LINKER_FLAGS "")
 set(EXTRA_EXE_LINKER_FLAGS_RELEASE "")
 set(EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
-IF(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
-   OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"
-   OR MINGW)
-    set(ENABLE_PROFILING 		OFF CACHE BOOL "Enable profiling in the GCC compiler (Add flags: -g -pg)")
-    set(USE_OMIT_FRAME_POINTER 	ON CACHE BOOL "Enable -fomit-frame-pointer for GCC")
-    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm*) # We can use only -O2 because the -O3 causes gcc crash
-        set(USE_O2 ON CACHE BOOL "Enable -O2 for GCC")
-        set(USE_FAST_MATH OFF CACHE BOOL "Enable -ffast-math for GCC")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR MINGW)
+    # profiling option
+    set(ENABLE_PROFILING OFF CACHE BOOL "Enable profiling in the GCC/Clang compiler (Add flags: -g -pg)")
+    # option for omitting frame pointer
+    set(USE_OMIT_FRAME_POINTER ON BOOL "Enable -fomit-frame-pointer for GCC/Clang")
+
+    # select optimization level
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES arm*)
+        # ARM system
+        set(USE_O2 ON CACHE BOOL "Enable -O2 for GCC/Clang")
+        set(USE_FAST_MATH OFF CACHE BOOL "Enable -ffast-math for GCC/Clang")
     endif()
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES powerpc*)
-        set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC")
-        set(USE_POWERPC ON CACHE BOOL "Enable PowerPC for GCC")
+        # PowerPC system
+        set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC/Clang")
+        set(USE_POWERPC ON CACHE BOOL "Enable PowerPC for GCC/Clang")
     endif ()
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64* OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64*)
-        set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC")
-        set(USE_FAST_MATH OFF CACHE BOOL "Enable -ffast-math for GCC")
-        set(USE_MMX ON CACHE BOOL "Enable MMX for GCC")
-        set(USE_SSE ON CACHE BOOL "Enable SSE for GCC")
-        set(USE_SSE2 ON CACHE BOOL "Enable SSE2 for GCC")
-        set(USE_SSE3 ON CACHE BOOL "Enable SSE3 for GCC")
+        # 64bit system
+        set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC/Clang")
+        set(USE_FAST_MATH OFF CACHE BOOL "Enable -ffast-math for GCC/Clang")
+        set(USE_MMX ON CACHE BOOL "Enable MMX for GCC/Clang")
+        set(USE_SSE ON CACHE BOOL "Enable SSE for GCC/Clang")
+        set(USE_SSE2 ON CACHE BOOL "Enable SSE2 for GCC/Clang")
+        set(USE_SSE3 ON CACHE BOOL "Enable SSE3 for GCC/Clang")
+        set(USE_SSE4 ON CACHE BOOL "Enable SSE4 for GCC/Clang")
     endif()
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES i686* OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES x86)
-        set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC")
-        set(USE_FAST_MATH OFF CACHE BOOL "Enable -ffast-math for GCC")
-        set(USE_MMX ON CACHE BOOL "Enable MMX for GCC")
-        set(USE_SSE OFF CACHE BOOL "Enable SSE for GCC")
-        set(USE_SSE2 OFF CACHE BOOL "Enable SSE2 for GCC")
-        set(USE_SSE3 OFF CACHE BOOL "Enable SSE3 for GCC")
-    endif ()
-    set(USE_AVX OFF CACHE BOOL "Enable AVX for GCC")
+        # 32bit system
+        set(USE_O3 ON CACHE BOOL "Enable -O3 for GCC/Clang")
+        set(USE_FAST_MATH OFF CACHE BOOL "Enable -ffast-math for GCC/Clang")
+        set(USE_MMX ON CACHE BOOL "Enable MMX for GCC/Clang")
+        set(USE_SSE OFF CACHE BOOL "Enable SSE for GCC/Clang")
+        set(USE_SSE2 OFF CACHE BOOL "Enable SSE2 for GCC/Clang")
+        set(USE_SSE3 OFF CACHE BOOL "Enable SSE3 for GCC/Clang")
+        set(USE_SSE4 OFF CACHE BOOL "Enable SSE4 for GCC/Clang")
+    endif()
+    set(USE_AVX ON CACHE BOOL "Enable AVX for GCC/Clang")
 
-
+    # warning options
     set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wall")
-
     if(WARNINGS_ARE_ERRORS)
         set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Werror")
     endif()
 
     # The -Wno-long-long is required in 64bit systems when including sytem headers.
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES x86_64* OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES amd64*)
-		set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wno-long-long")
+        set(EXTRA_C_FLAGS "${EXTRA_C_FLAGS} -Wno-long-long")
     endif()
 
-    # Whole program optimization
+    # apply options
     if(WHOLE_PROGRAM_OPTIMIZATION)
         set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -fwhole-program --combine")
     endif()
-
-    # Other optimizations
-    if(USE_OMIT_FRAME_POINTER)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -fomit-frame-pointer")
+    if(NOT ENABLE_PROFILING AND USE_OMIT_FRAME_POINTER)
+        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -fomit-frame-pointer")
     endif()
     if(USE_O2)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -O2")
+        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -O2")
     endif()
     if(USE_O3)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -O3")
+        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -O3")
     endif()
     if(USE_FAST_MATH)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -ffast-math")
+        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -ffast-math")
     endif()
     if(USE_POWERPC)
-       set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -mcpu=G3 -mtune=G5")
+        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -mcpu=G3 -mtune=G5")
     endif()
+
+    # apply vectorization
     if(USE_MMX)
-       set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -mmmx")
-       add_definitions(-DUSE_MMX)
+        set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -mmmx")
+        add_definitions(-DUSE_MMX)
     endif()
     if(USE_SSE)
-       set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse ")
-       add_definitions(-DUSE_SSE)
+        set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse")
+        add_definitions(-DUSE_SSE)
     endif()
     if(USE_SSE2)
-       set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse2")
-       add_definitions(-DUSE_SSE2)
+        set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse2")
+        add_definitions(-DUSE_SSE2)
     endif()
     if(USE_SSE3 AND NOT MINGW) # SSE3 should be disabled under MingW because it generates compiler errors
-       set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse3")
-       add_definitions(-DUSE_SSE3)
+        set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse3")
+        add_definitions(-DUSE_SSE3)
+    endif()
+    if(USE_SSE4 AND NOT MINGW)
+        set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse4.1")
+        add_definitions(-DUSE_SSE4)
+    endif()
+    IF(USE_AVX)
+        set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -mavx")
+        add_definitions(-DUSE_AVX)
     endif()
 
-    if(USE_SSE4 AND NOT MINGW) # SSE3 should be disabled under MingW because it generates compiler errors
-       set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -msse4.1")
-       add_definitions(-DUSE_SSE4)
-    endif()
-
-    IF(USE_AVX) 
-      set(VECTORIAL_INSTRUCTIONS "${VECTORIAL_INSTRUCTIONS} -mavx")
-     add_definitions(-DUSE_AVX)
-    endif()
-
- if(ENABLE_PROFILING)
+    if(ENABLE_PROFILING)
         set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE} -pg -g")
     else()
         if(NOT APPLE)
@@ -209,91 +202,83 @@ IF(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
         endif()
     endif()
 
+    # TODO: what is this for?
+    if(${CMAKE_SYSTEM_PROCESSOR} MATCHES armv7l) # In ARM_Cortex8 with neon, enable vectorized operations
+        set(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE}")
+    endif()
 
-    IF(${CMAKE_SYSTEM_PROCESSOR} MATCHES armv7l) # In ARM_COrtex8 with neon, enalble vectorized operations
-        SET(EXTRA_C_FLAGS_RELEASE "${EXTRA_C_FLAGS_RELEASE}  ")
-    ENDIF()
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+    set(CMAKE_CXX_FLAGS "${EXTRA_C_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS_RELEASE "${VECTORIAL_INSTRUCTIONS} ${EXTRA_C_FLAGS_RELEASE} -DNDEBUG -D_NDEBUG -O3")
+    set(CMAKE_CXX_FLAGS_DEBUG "${VECTORIAL_INSTRUCTIONS} -g3 -DDEBUG -D_DEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${VECTORIAL_INSTRUCTIONS} -O2 -g3 -DDEBUG -D_DEBUG")
 
-
-    set(CMAKE_CXX_FLAGS_RELEASE "${VECTORIAL_INSTRUCTIONS} ${EXTRA_C_FLAGS_RELEASE}  -O3  -std=c++11 -Wall -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DEBUG "${VECTORIAL_INSTRUCTIONS}  -g3  -DDEBUG -D_DEBUG   -std=c++11 -Wall")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${VECTORIAL_INSTRUCTIONS} -O2 -g3  -DDEBUG -D_DEBUG  -std=c++11 -Wall")
-
-    message(STATUS "vec=${VECTORIAL_INSTRUCTIONS}")
-    MESSAGE( STATUS "-------------------------------------------------------------------------------" )
-    message( STATUS "GNU COMPILER")
-    MESSAGE( STATUS "-------------------------------------------------------------------------------" )
-
-
-
-
-ELSE()  # MSVC
-
-add_definitions(-DNOMINMAX)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    add_definitions(-DNOMINMAX)
+endif() #END OF COMPILER SPECIFIC OPTIONS
 
 
-ENDIF()#END OF COMPILER SPECIFIC OPTIONS
-find_package(OpenMP  )
-if (OPENMP_FOUND)
-        add_compile_options(-DUSE_OPENMP)
-        set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-        set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-ENDIF()
+find_package(OpenMP)
+if(OPENMP_FOUND)
+    add_compile_options(-DUSE_OPENMP)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
+
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS} ")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS} ")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CMAKE_CXX_FLAGS} ")
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${EXTRA_EXE_LINKER_FLAGS}")
-SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${EXTRA_EXE_LINKER_FLAGS_RELEASE}")
-SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${EXTRA_EXE_LINKER_FLAGS_DEBUG}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${EXTRA_EXE_LINKER_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${EXTRA_EXE_LINKER_FLAGS_RELEASE}")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${EXTRA_EXE_LINKER_FLAGS_DEBUG}")
 
 
-#------------------------------------------------
+#------------------------------------------------------------------------------
 # DIRS
-#------------------------------------------------
-ADD_SUBDIRECTORY(src)
-IF (BUILD_UTILS)
-  ADD_SUBDIRECTORY(utils)
-  ADD_SUBDIRECTORY(tests)
-ENDIF()
+#------------------------------------------------------------------------------
+add_subdirectory(src)
+
+if(BUILD_UTILS)
+    add_subdirectory(utils)
+endif()
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 
 # ----------------------------------------------------------------------------
-# display status message for important variables
+# Display status message for important variables
 # ----------------------------------------------------------------------------
-message( STATUS )
-MESSAGE( STATUS "-------------------------------------------------------------------------------" )
-message( STATUS "General configuration for ${PROJECT_NAME} ${PROJECT_VERSION}")
-MESSAGE( STATUS "-------------------------------------------------------------------------------" )
-message( STATUS )
-message("    Built as dynamic libs?:" ${BUILD_SHARED_LIBS})
-message("    Compiler:"                   "${CMAKE_COMPILER}"   "${CMAKE_CXX_COMPILER}")
 
-message( STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
-message( STATUS "C++ flags (Release):       ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
-message( STATUS "C++ flags (Debug):         ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
-message( STATUS "C++ flags (Relase+Debug):         ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-
-message( STATUS "CMAKE_CXX_FLAGS:         ${CMAKE_CXX_FLAGS}")
-message( STATUS "CMAKE_BINARY_DIR:         ${CMAKE_BINARY_DIR}")
-message( STATUS "OPENMP FOUND:         ${OPENMP_FOUND}")
-
-MESSAGE( STATUS )
-MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR = ${CMAKE_SYSTEM_PROCESSOR}" )
-MESSAGE( STATUS "BUILD_SHARED_LIBS = ${BUILD_SHARED_LIBS}" )
-MESSAGE( STATUS "CMAKE_INSTALL_PREFIX = ${CMAKE_INSTALL_PREFIX}" )
-MESSAGE( STATUS "CMAKE_BUILD_TYPE = ${CMAKE_BUILD_TYPE}" )
-MESSAGE( STATUS "CMAKE_MODULE_PATH = ${CMAKE_MODULE_PATH}" )
-MESSAGE( STATUS "BUILD_UTILS= ${BUILD_UTILS}" )
-MESSAGE( STATUS "BUILD_TESTS= ${BUILD_TESTS}" )
-MESSAGE( STATUS "OPENCV_DIR= ${OpenCV_DIR}" ) 
- 
-
-
-MESSAGE( STATUS )
-MESSAGE( STATUS "OpenCV_LIB_DIR=${OpenCV_LIB_DIR}")
-MESSAGE( STATUS "CMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}")
-
-MESSAGE( STATUS )
-MESSAGE( STATUS )
-MESSAGE( STATUS "Change a value with: cmake -D<Variable>=<Value>" )
-MESSAGE( STATUS )
+message(STATUS)
+message(STATUS "-------------------------------------------------------------------------------" )
+message(STATUS "General configuration for ${PROJECT_NAME} ${PROJECT_VERSION}")
+message(STATUS "-------------------------------------------------------------------------------" )
+message(STATUS)
+message(STATUS "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
+message(STATUS "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
+message(STATUS)
+message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
+message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "Processor: ${CMAKE_SYSTEM_PROCESSOR}")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Build shared libs: ${BUILD_SHARED_LIBS}")
+message(STATUS "C++ flags (Common):${CMAKE_CXX_FLAGS}")
+message(STATUS "C++ flags (Release): ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "C++ flags (Debug): ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "C++ flags (RelWithDebInfo): ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+message(STATUS)
+message(STATUS "BUILD_UTILS: ${BUILD_UTILS}")
+message(STATUS "BUILD_TESTS: ${BUILD_TESTS}")
+message(STATUS "OPENMP FOUND: ${OPENMP_FOUND}")
+message(STATUS "OpenCV_DIR: ${OpenCV_DIR}" )
+message(STATUS "OpenCV_INCLUDE_DIRS: ${OpenCV_INCLUDE_DIRS}")
+message(STATUS "OpenCV_LIBS: ${OpenCV_LIBS}")
+message(STATUS)
+message(STATUS "Change a value with: cmake -D<Variable>=<Value>" )
+message(STATUS)

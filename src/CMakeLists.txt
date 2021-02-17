@@ -1,35 +1,42 @@
-ADD_DEFINITIONS(-DNOMINMAX)
+# ----------------------------------------------------------------------------
+#   FBoW library
+# ----------------------------------------------------------------------------
 
-SET(  srcs  fbow.cpp  vocabulary_creator.cpp )
-SET(  hdrs  fbow.h fbow_exports.h vocabulary_creator.h cpu.h)
+set(FBOW_LIB ${EXTRALIBNAME}fbow)
+set(FBOW_LIB ${FBOW_LIB} PARENT_SCOPE) # elevate this variable to the parent scope too (still needs to be defined in this scope first)
+#message(STATUS "PROJECT_NAME: ${PROJECT_NAME}")
+#message(STATUS "FBOW_LIB: ${FBOW_LIB}")
 
-SET (THIS_LIBNAME ${EXTRALIBNAME}fbow)
+set(SOURCES fbow.cpp vocabulary_creator.cpp)
+set(HEADERS fbow.h fbow_exports.h vocabulary_creator.h cpu.h)
 
+add_library(${FBOW_LIB} ${SOURCES} ${HEADERS})
 
-ADD_LIBRARY(${THIS_LIBNAME} ${srcs} ${hdrs})
-
-SET_TARGET_PROPERTIES(${THIS_LIBNAME} PROPERTIES 				# create *nix style library versions + symbolic links
-        DEFINE_SYMBOL FBOW_DSO_EXPORTS
-        VERSION ${PROJECT_VERSION}
-        SOVERSION ${PROJECT_SOVERSION}
-        CLEAN_DIRECT_OUTPUT 1 					# allow creating static and shared libs without conflicts
-        OUTPUT_NAME "${THIS_LIBNAME}${PROJECT_DLLVERSION}" 	# avoid conflicts between library and binary target names
+set_target_properties(${FBOW_LIB} PROPERTIES
+    DEFINE_SYMBOL FBOW_DLL_EXPORTS
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_SOVERSION}
+    CLEAN_DIRECT_OUTPUT 1 # allow creating static and shared libs without conflicts
+    OUTPUT_NAME "${FBOW_LIB}${PROJECT_DLLVERSION}" # avoid conflicts between library and binary target names
 )
-TARGET_LINK_LIBRARIES(${THIS_LIBNAME} ${OpenCV_LIBS} ${OpenMP_CXX_LIBRARIES})
 
-INSTALL(TARGETS ${THIS_LIBNAME}
-        RUNTIME DESTINATION bin COMPONENT main			# Install the dll file in bin directory
-        LIBRARY DESTINATION lib PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE COMPONENT main
-        ARCHIVE DESTINATION lib COMPONENT main)			# Install the dll.a file in lib directory
+target_link_libraries(${FBOW_LIB}
+    PUBLIC ${OpenCV_LIBS} ${OpenMP_CXX_LIBRARIES})
 
+install(TARGETS ${FBOW_LIB}
+    RUNTIME DESTINATION bin COMPONENT main # Install the dll file in bin directory
+    LIBRARY DESTINATION lib PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE COMPONENT main
+    ARCHIVE DESTINATION lib COMPONENT main # Install the dll.a file in lib directory
+)
 
-IF(FBOW_DEVINSTALL)
+if(FBOW_DEVINSTALL)
+    install(FILES ${HEADERS}
+        DESTINATION include/fbow
+        COMPONENT main
+    )
+endif()
 
-    INSTALL(FILES ${hdrs}
-            DESTINATION include/fbow
-            COMPONENT main)
-ENDIF()
-
+# TODO: remove all below, but check install scripts
 
 #set(sources
 #    fbow.cpp

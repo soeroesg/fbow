@@ -7,6 +7,7 @@
 #include "vocabulary_creator.h"
 // OpenCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/types_c.h> // for CV_TERMCRIT_ITER == cv::TermCriteria::Type::COUNT
 
 // OpenCV
 #include <opencv2/core/core.hpp>
@@ -60,7 +61,7 @@ int main(int argc,char **argv)
         auto features=readFeaturesFromFile(argv[1]);
 
         //defining terms for bowkmeans trainer
-        cv::TermCriteria tc(CV_TERMCRIT_ITER,100,0.001);
+        cv::TermCriteria tc(CV_TERMCRIT_ITER, 100, 0.001);
           int dictionarySize = 1000;
           int retries = 1;
           int flags = cv::KMEANS_PP_CENTERS;
@@ -92,8 +93,6 @@ int main(int argc,char **argv)
 
 
             cout<<"time="<<double(std::chrono::duration_cast<std::chrono::nanoseconds>(t_end-t_start).count())/1e6<<" ns"<<endl;
-
-
 
     }catch(std::exception &ex){
         cerr<<ex.what()<<endl;
