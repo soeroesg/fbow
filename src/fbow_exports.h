@@ -25,17 +25,17 @@ The views and conclusions contained in the software and documentation are those 
 authors and should not be interpreted as representing official policies, either expressed
 or implied, of Rafael Muñoz Salinas.
 ********************************/
- 
+
 
 
 #ifndef __FBOW_CORE_TYPES_H__
 #define __FBOW_CORE_TYPES_H__
- 
+
 #if !defined _CRT_SECURE_NO_DEPRECATE && _MSC_VER > 1300
 #define _CRT_SECURE_NO_DEPRECATE /* to avoid multiple Visual Studio 2005 warnings */
 #endif
 
-#if (defined WIN32 || defined _WIN32 || defined WINCE)   && defined FBOW_DSO_EXPORTS
+#if (defined WIN32 || defined _WIN32 || defined WINCE) && defined FBOW_DLL_EXPORTS
     #define FBOW_API __declspec(dllexport)
     #pragma warning ( disable : 4251 ) //disable warning to templates with dll linkage.
     #pragma warning ( disable : 4290 ) //disable warning due to exception specifications.
