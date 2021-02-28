@@ -20,7 +20,7 @@
 #else
 #   error "No cpuid intrinsic defined for processor architecture."
 #endif
-#endif //ANDROID
+#endif //__ANDROID__
 namespace fbow{
 struct cpu{
     bool Vendor_AMD,Vendor_Intel;//  Vendor

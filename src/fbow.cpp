@@ -181,11 +181,15 @@ void Vocabulary::fromStream(std::istream &str)
 {
     uint64_t sig;
     str.read((char*)&sig,sizeof(sig));
-    if (sig!=55824124) throw std::runtime_error("Vocabulary::fromStream invalid signature");
+    if (sig != 55824124) {
+        throw std::runtime_error("Vocabulary::fromStream invalid signature");
+    }
     //read string
     str.read((char*)&_params,sizeof(params));
     _data = std::unique_ptr<char[], decltype(&AlignedFree)>((char*)AlignedAlloc(_params._aligment, _params._total_size), &AlignedFree);
-    if (_data.get() == nullptr) throw std::runtime_error("Vocabulary::fromStream Could not allocate data");
+    if (_data.get() == nullptr) {
+        throw std::runtime_error("Vocabulary::fromStream Could not allocate data");
+    }
     str.read(_data.get(), _params._total_size);
 }
 
@@ -278,12 +282,14 @@ void fBow::fromStream(std::istream &str)    {
 void fBow2::toStream(std::ostream &str) const   {
     uint32_t _size=size();
     str.write((char*)&_size,sizeof(_size));
-    for(const auto &e:*this){
+    for(const auto &e : *this){
         str.write((char*)&e.first,sizeof(e.first));
         //now the vector
         _size=e.second.size();
         str.write((char*)&_size,sizeof(_size));
-        str.write((char*)&e.second[0],sizeof(e.second[0])*e.second.size());
+        if (_size > 0) {
+            str.write((char*)&e.second[0], sizeof(e.second[0]) * e.second.size());
+        }
     }
 }
 
@@ -298,7 +304,9 @@ void fBow2::fromStream(std::istream &str)    {
         str.read((char*)&key,sizeof(key));
         str.read((char*)&_sizeVec,sizeof(_sizeVec));//vector size
         vec.resize(_sizeVec);
-        str.read((char*)&vec[0],sizeof(vec[0])*_sizeVec);
+        if (_sizeVec > 0) {
+          str.read((char*)&vec[0], sizeof(vec[0]) * _sizeVec);
+        }
         insert({key,vec});
     }
 }
